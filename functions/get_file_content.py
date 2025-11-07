@@ -1,5 +1,7 @@
 import os
 from config import MAX_CHARS
+from google.genai import types
+
 
 def get_file_content(working_directory,file_path):
     try:
@@ -13,14 +15,30 @@ def get_file_content(working_directory,file_path):
             return f'Error: File not found or is not a regular file: "{file_path}"'
 
         file_content = ""
+        truncated_content=""
+        messaged_content = ""
         # MAX_CHARS = config.MAX_CHARS
         with open(file_abs_path,"r") as f:
             file_content = f.read()
             if len(file_content) > MAX_CHARS:
                 truncated_content = file_content[:MAX_CHARS]
                 messaged_content  = truncated_content + f' [...File "{file_path}" truncated at 10000 characters]'
-
-        # print(file_content,"=======file content")
+            else:   messaged_content = file_content
         return messaged_content
     except Exception as e:
         return f"Error: {e}"
+
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description=f"Reads and returns the first {MAX_CHARS} characters of the content from a specified file within the working directory.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="The path to the file whose content should be read, relative to the working directory.",
+            ),
+        },
+        required=["file_path"],
+    ),
+)

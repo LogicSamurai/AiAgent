@@ -1,28 +1,94 @@
-import os,sys
-from dotenv import load_dotenv
+import sys
+import os
 from google import genai
 from google.genai import types
+from dotenv import load_dotenv
 
-args = sys.argv
-if len(args) <2:
-    print("No prompt given!!")
-    sys.exit(1)
+from prompts import system_prompt
+from available_functions import call_function, available_functions
 
-prompt = sys.argv[1]
-if "--verbose" in args:
-    print(f"User prompt: {prompt}")
 
-load_dotenv()
-api_key = os.environ.get("GEMINI_API_KEY")
-client = genai.Client(api_key=api_key)
+def main():
+    load_dotenv()
 
-messages = [
-    types.Content(role="user",parts=[types.Part(text=prompt)])
-]
+    verbose = "--verbose" in sys.argv
+    args = []
+    for arg in sys.argv[1:]:
+        if not arg.startswith("--"):
+            args.append(arg)
 
-res = client.models.generate_content(model="gemini-2.0-flash-001",contents=messages)
+    if not args:
+        print("AI Code Assistant")
+        print('\nUsage: python main.py "your prompt here" [--verbose]')
+        print('Example: python main.py "How do I fix the calculator?"')
+        sys.exit(1)
 
-if "--verbose" in args:
-    print("GEMINI RESPONSE:\n",res.text)
-    print(f"Prompt tokens: {res.usage_metadata.prompt_token_count}")
-    print(f"Response tokens: {res.usage_metadata.candidates_token_count}")
+    api_key = os.environ.get("GEMINI_API_KEY")
+    client = genai.Client(api_key=api_key)
+
+    user_prompt = " ".join(args)
+
+    if verbose:
+        print(f"User prompt: {user_prompt}\n")
+
+    messages = [
+        types.Content(role="user", parts=[types.Part(text=user_prompt)]),
+    ]
+
+    try:
+        for i in range(20):
+            result = generate_content(client, messages, verbose)
+            if result:
+                print(result)
+                break
+    except Exception as e:
+        print(f"Error: {e}")
+
+def generate_content(client, messages, verbose):
+    response = client.models.generate_content(
+        model="gemini-2.0-flash-001",
+        contents=messages,
+        config=types.GenerateContentConfig(
+            tools=[available_functions], system_instruction=system_prompt
+        ),
+    )
+    if response.candidates:
+        candidates = response.candidates
+        for candidate in candidates:
+            if candidate.content:
+                messages.append(candidate.content)
+
+    if verbose:
+        print("Prompt tokens:", response.usage_metadata.prompt_token_count)
+        print("Response tokens:", response.usage_metadata.candidates_token_count)
+
+    if not response.function_calls:
+        return response.text
+
+    function_responses = []
+    function_names = []
+    for function_call_part in response.function_calls:
+        function_call_result = call_function(function_call_part, verbose)
+        if (
+            not function_call_result.parts
+            or not function_call_result.parts[0].function_response
+        ):
+            raise Exception("empty function call result")
+        if verbose:
+            print(f"-> {function_call_result.parts[0].function_response.response}")
+        function_names.append(function_call_part.name)
+        function_responses.append(function_call_result.parts[0])
+
+    print("Function responses:", function_responses)
+    new_message = types.Content(
+        role="user",
+        parts=function_responses,
+    )
+    messages.append(new_message)
+
+    if not function_responses:
+        raise Exception("no function responses generated, exiting.")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,48 +1,10 @@
-# # tests.py
-# import unittest
-# from functions.get_files_info import get_files_info
-
-# class TestGetFiles(unittest.TestCase):
-#     def setUp(self):
-#         self.get_files_info = get_files_info
-
-#     def print_result(self, label, result):
-#         print(f"Result for {label} directory:")
-#         if isinstance(result, str):
-#             # It's an error string, print directly
-#             print(result)
-#         else:
-#             # It's a list of lines, join normally
-#             print("\n".join(result))
-#         print()  # blank line for spacing
-    
-#     def test_current_directory(self):
-#         result = self.get_files_info("calculator")
-#         self.print_result("current", result)
-
-#     def test_pkg_directory(self):
-#         result = self.get_files_info("calculator", "pkg")
-#         self.print_result("'pkg'", result)
-
-#     def test_bin_directory(self):
-#         result = self.get_files_info("calculator", "/bin")
-#         self.print_result("'/bin'", result)
-
-#     def test_parent_directory(self):
-#         result = self.get_files_info("calculator", "../")
-#         self.print_result("'../'", result)
-
-# if __name__ == "__main__":
-#     unittest.main()
-
-
 # tests.py
 import unittest
-from functions.get_file_content import get_file_content
+from functions.run_python_file import run_python_file
 
 class TestGetFiles(unittest.TestCase):
     def setUp(self):
-        self.get_file_content = get_file_content
+        self.run_python_file = run_python_file
 
     def print_result(self, label, result):
         print(f"Result for {label} directory:")
@@ -51,21 +13,29 @@ class TestGetFiles(unittest.TestCase):
             print(result)
         print()  # blank line for spacing
     
-    def test_current_directory(self):
-        result = self.get_file_content("calculator","lorem.txt")
-        self.print_result("current", result)
+    def test_mainpy_file(self):
+        result = self.run_python_file("calculator","main.py")
+        self.print_result("main.py", result)
 
-    # def test_pkg_directory(self):
-    #     result = self.get_file_content("calculator", "pkg")
-    #     self.print_result("'pkg'", result)
+    def test_main_file(self):
+        result = self.run_python_file("calculator", "main.py", ["3 + 5"])
+        self.print_result("main.py with attrs", result)
 
-    # def test_bin_directory(self):
-    #     result = self.get_file_content("calculator", "/bin")
-    #     self.print_result("'/bin'", result)
+    def test_tests_file(self):
+        result = self.run_python_file("calculator", "tests.py")
+        self.print_result("tests.py", result)
+    
+    def test_outer_file(self):
+        result = self.run_python_file("calculator","../main.py")
+        self.print_result("../main.py", result)
 
-    # def test_parent_directory(self):
-    #     result = self.get_file_content("calculator", "../")
-    #     self.print_result("'../'", result)
+    def test_nonexistent_file(self):
+        result = self.run_python_file("calculator","nonexistent.py")
+        self.print_result("nonexistent.py", result)
+
+    def test_loremtxt_file(self):
+        result = self.run_python_file("calculator","lorem.txt")
+        self.print_result("lorem.txt", result)
 
 if __name__ == "__main__":
     unittest.main()
